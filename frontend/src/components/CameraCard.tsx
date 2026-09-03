@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Camera, RefreshCw, WifiOff, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { useCamera } from '../hooks';
+import * as api from '../services/api';
 
 export function CameraCard() {
   const { t } = useLanguage();
@@ -22,11 +23,7 @@ export function CameraCard() {
   const toggleLight = async () => {
     try {
       const newState = !lightOn;
-      await fetch('/api/camera/light', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ on: newState })
-      });
+      await api.toggleCameraLight(newState);
       setLightOn(newState);
     } catch (e) {
       console.error(e);
@@ -36,11 +33,7 @@ export function CameraCard() {
   const toggleResolution = async () => {
     try {
       const newState = !highRes;
-      await fetch('/api/camera/resolution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ high: newState })
-      });
+      await api.setCameraResolution(newState);
       setHighRes(newState);
       handleRefresh(); // reload image with new res
     } catch (e) {

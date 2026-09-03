@@ -6,8 +6,12 @@
 import axios from 'axios';
 import { SensorData, DeviceStatus, Alert, AIRecommendation, SensorReading, TimeRange, Language } from '../types';
 
+const baseURL = import.meta.env.VITE_API_BASE_URL 
+  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -53,7 +57,17 @@ export async function setManualMode(): Promise<{ success: boolean }> {
 // ── Camera ─────────────────────────────────────────────────
 // Returns a URL that the browser can use as an <img> src
 export function getCameraUrl(cacheBust?: number): string {
-  return `/api/camera/capture${cacheBust ? `?t=${cacheBust}` : ''}`;
+  return `${baseURL}/camera/capture${cacheBust ? `?t=${cacheBust}` : ''}`;
+}
+
+export async function toggleCameraLight(on: boolean): Promise<boolean> {
+  const res = await api.post('/camera/light', { on });
+  return res.data.success;
+}
+
+export async function setCameraResolution(high: boolean): Promise<boolean> {
+  const res = await api.post('/camera/resolution', { high });
+  return res.data.success;
 }
 
 // ── Alerts ─────────────────────────────────────────────────
