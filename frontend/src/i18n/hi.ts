@@ -1,0 +1,130 @@
+// ============================================================
+// HINDI TRANSLATIONS — हिन्दी
+// ============================================================
+
+import { en } from './en';
+
+export const hi: typeof en = {
+  appName: 'AI स्मार्ट कृषि सहायक',
+  appTagline: 'बुद्धिमान कृषि निगरानी',
+
+  dashboard: 'डैशबोर्ड',
+  history: 'इतिहास',
+  alerts: 'अलर्ट',
+  settings: 'सेटिंग्स',
+  aiAssistant: 'AI सहायक',
+
+  systemStatus: 'सिस्टम स्थिति',
+  online: 'ऑनलाइन',
+  offline: 'ऑफलाइन',
+  connected: 'जुड़ा हुआ',
+  disconnected: 'डिसकनेक्ट',
+  available: 'उपलब्ध',
+  unavailable: 'अनुपलब्ध',
+  lastSeen: 'आखिरी बार देखा',
+  lastUpdated: 'आखिरी बार अपडेट',
+
+  sensors: 'सेंसर',
+  soilMoisture: 'मिट्टी की नमी',
+  soilSensor1: 'मिट्टी सेंसर 1',
+  soilSensor2: 'मिट्टी सेंसर 2',
+  averageSoil: 'औसत मिट्टी',
+  temperature: 'तापमान',
+  humidity: 'आर्द्रता',
+  light: 'प्रकाश स्तर',
+  waterLevel: 'पानी का स्तर',
+
+  veryDry: 'बहुत सूखी मिट्टी',
+  moderate: 'मध्यम',
+  good: 'अच्छी',
+  wet: 'नम',
+  irrigationRecommended: 'सिंचाई की सिफारिश',
+  soilAdequate: 'मिट्टी की नमी पर्याप्त',
+
+  normal: 'सामान्य',
+  warning: 'चेतावनी',
+  highTemp: 'उच्च तापमान',
+  tempNormal: 'तापमान सामान्य',
+  tempWarning: 'तापमान चेतावनी',
+  tempHigh: 'उच्च तापमान अलर्ट',
+
+  lowHumidity: 'कम आर्द्रता',
+  highHumidity: 'उच्च आर्द्रता',
+  normalHumidity: 'सामान्य आर्द्रता',
+
+  dark: 'अंधेरा',
+  normalLight: 'सामान्य प्रकाश',
+  bright: 'उज्ज्वल',
+
+  waterSafe: 'सुरक्षित',
+  waterLow: 'पानी कम है',
+  waterCritical: 'गंभीर',
+  lowWaterWarning: 'पानी का स्तर कम है',
+  criticalWaterWarning: 'पानी का स्तर गंभीर रूप से कम — पंप बंद',
+
+  pump: 'पंप',
+  pumpControl: 'पंप नियंत्रण',
+  pumpOn: 'पंप चालू है',
+  pumpOff: 'पंप बंद है',
+  pumpRunning: 'पंप चल रहा है',
+  pumpStopped: 'पंप रुका हुआ है',
+  autoMode: 'स्वचालित मोड',
+  manualMode: 'मैनुअल मोड',
+  turnPumpOn: 'पंप चालू करें',
+  turnPumpOff: 'पंप बंद करें',
+  setAutoMode: 'स्वचालित मोड सेट करें',
+  setManualMode: 'मैनुअल मोड सेट करें',
+
+  camera: 'कैमरा',
+  cameraFeed: 'कैमरा फ़ीड',
+  refreshCamera: 'कैमरा रिफ्रेश करें',
+  autoRefresh: 'स्वतः रिफ्रेश',
+  cameraOffline: 'कैमरा ऑफलाइन',
+  cameraConnecting: 'कनेक्ट हो रहा है...',
+
+  aiRecommendations: 'AI सिफारिशें',
+  getAIAdvice: 'AI सलाह लें',
+  analyzing: 'विश्लेषण हो रहा है...',
+  urgency: 'तात्कालिकता',
+  recommendation: 'सिफारिश',
+  actions: 'सुझाए गए कार्य',
+  soilStatus: 'मिट्टी की स्थिति',
+  irrigationAction: 'सिंचाई कार्य',
+
+  urgencyLow: 'कम',
+  urgencyMedium: 'मध्यम',
+  urgencyHigh: 'उच्च',
+  urgencyCritical: 'गंभीर',
+
+  noAlerts: 'कोई सक्रिय अलर्ट नहीं',
+  resolveAlert: 'हल करें',
+  allAlerts: 'सभी अलर्ट',
+  activeAlerts: 'सक्रिय अलर्ट',
+  alertResolved: 'अलर्ट हल हो गया',
+  severity: 'गंभीरता',
+  info: 'जानकारी',
+  critical: 'गंभीर',
+
+  timeRange: 'समय सीमा',
+  oneHour: '1 घंटा',
+  sixHours: '6 घंटे',
+  twentyFourHours: '24 घंटे',
+  sevenDays: '7 दिन',
+  thirtyDays: '30 दिन',
+  noData: 'कोई डेटा उपलब्ध नहीं',
+
+  language: 'भाषा',
+  theme: 'थीम',
+  save: 'सहेजें',
+  saved: 'सहेज लिया!',
+  cancel: 'रद्द करें',
+  refresh: 'रिफ्रेश',
+
+  demoMode: '⚠ डेमो डेटा — ESP32 ऑफलाइन',
+  demoModeDesc: 'अनुकरणीय सेंसर डेटा दिखाया जा रहा है। लाइव रीडिंग के लिए ESP32 कनेक्ट करें।',
+
+  esp32Offline: 'ESP32 ऑफलाइन है',
+  cameraOfflineDesc: 'ESP32-CAM पहुंच योग्य नहीं है। नेटवर्क कनेक्शन जांचें।',
+  loadingError: 'डेटा लोड करने में विफल',
+  retrying: 'पुनः प्रयास हो रहा है...',
+};

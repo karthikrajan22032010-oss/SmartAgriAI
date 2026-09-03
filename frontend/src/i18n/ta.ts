@@ -1,0 +1,130 @@
+// ============================================================
+// TAMIL TRANSLATIONS — தமிழ்
+// ============================================================
+
+import { en } from './en';
+
+export const ta: typeof en = {
+  appName: 'AI ஸ்மார்ட் விவசாய உதவியாளர்',
+  appTagline: 'அறிவார்ந்த விவசாய கண்காணிப்பு',
+
+  dashboard: 'டாஷ்போர்ட்',
+  history: 'வரலாறு',
+  alerts: 'எச்சரிக்கைகள்',
+  settings: 'அமைப்புகள்',
+  aiAssistant: 'AI உதவியாளர்',
+
+  systemStatus: 'கணினி நிலை',
+  online: 'ஆன்லைனில்',
+  offline: 'ஆஃப்லைன்',
+  connected: 'இணைக்கப்பட்டது',
+  disconnected: 'இணைப்பு துண்டிக்கப்பட்டது',
+  available: 'கிடைக்கிறது',
+  unavailable: 'கிடைக்கவில்லை',
+  lastSeen: 'கடைசியாக பார்க்கப்பட்டது',
+  lastUpdated: 'கடைசியாக புதுப்பிக்கப்பட்டது',
+
+  sensors: 'சென்சார்கள்',
+  soilMoisture: 'மண் ஈரப்பதம்',
+  soilSensor1: 'மண் சென்சார் 1',
+  soilSensor2: 'மண் சென்சார் 2',
+  averageSoil: 'சராசரி மண்',
+  temperature: 'வெப்பநிலை',
+  humidity: 'ஈரப்பதம்',
+  light: 'ஒளி அளவு',
+  waterLevel: 'நீர் மட்டம்',
+
+  veryDry: 'மிகவும் வறண்டது',
+  moderate: 'மிதமான',
+  good: 'நல்லது',
+  wet: 'ஈரமான',
+  irrigationRecommended: 'நீர்ப்பாசனம் பரிந்துரைக்கப்படுகிறது',
+  soilAdequate: 'மண் ஈரப்பதம் போதுமானது',
+
+  normal: 'சாதாரண',
+  warning: 'எச்சரிக்கை',
+  highTemp: 'அதிக வெப்பநிலை',
+  tempNormal: 'வெப்பநிலை சாதாரண',
+  tempWarning: 'வெப்பநிலை எச்சரிக்கை',
+  tempHigh: 'அதிக வெப்பநிலை எச்சரிக்கை',
+
+  lowHumidity: 'குறைந்த ஈரப்பதம்',
+  highHumidity: 'அதிக ஈரப்பதம்',
+  normalHumidity: 'சாதாரண ஈரப்பதம்',
+
+  dark: 'இருட்டு',
+  normalLight: 'சாதாரண ஒளி',
+  bright: 'பிரகாசமான',
+
+  waterSafe: 'பாதுகாப்பான',
+  waterLow: 'நீர் மட்டம் குறைவு',
+  waterCritical: 'மிக குறைவான நீர்',
+  lowWaterWarning: 'நீர் மட்டம் குறைவாக உள்ளது',
+  criticalWaterWarning: 'நீர் மட்டம் மிக குறைவு — பம்ப் நிறுத்தப்பட்டது',
+
+  pump: 'பம்ப்',
+  pumpControl: 'பம்ப் கட்டுப்பாடு',
+  pumpOn: 'பம்ப் இயக்கத்தில்',
+  pumpOff: 'பம்ப் நிறுத்தத்தில்',
+  pumpRunning: 'பம்ப் இயங்குகிறது',
+  pumpStopped: 'பம்ப் நிறுத்தப்பட்டது',
+  autoMode: 'தானியங்கி முறை',
+  manualMode: 'கைமுறை முறை',
+  turnPumpOn: 'பம்ப் இயக்கு',
+  turnPumpOff: 'பம்ப் நிறுத்து',
+  setAutoMode: 'தானியங்கி முறை அமைக்கவும்',
+  setManualMode: 'கைமுறை முறை அமைக்கவும்',
+
+  camera: 'கேமரா',
+  cameraFeed: 'கேமரா ஊட்டம்',
+  refreshCamera: 'கேமரா புதுப்பி',
+  autoRefresh: 'தானாக புதுப்பி',
+  cameraOffline: 'கேமரா ஆஃப்லைன்',
+  cameraConnecting: 'இணைக்கிறது...',
+
+  aiRecommendations: 'AI பரிந்துரைகள்',
+  getAIAdvice: 'AI ஆலோசனை பெறுக',
+  analyzing: 'பகுப்பாய்வு செய்கிறது...',
+  urgency: 'அவசரம்',
+  recommendation: 'பரிந்துரை',
+  actions: 'பரிந்துரைக்கப்பட்ட நடவடிக்கைகள்',
+  soilStatus: 'மண் நிலை',
+  irrigationAction: 'நீர்ப்பாசன நடவடிக்கை',
+
+  urgencyLow: 'குறைவு',
+  urgencyMedium: 'மிதமான',
+  urgencyHigh: 'அதிகம்',
+  urgencyCritical: 'மிக அதிகம்',
+
+  noAlerts: 'செயலில் உள்ள எச்சரிக்கைகள் இல்லை',
+  resolveAlert: 'தீர்க்கவும்',
+  allAlerts: 'அனைத்து எச்சரிக்கைகள்',
+  activeAlerts: 'செயலில் உள்ள எச்சரிக்கைகள்',
+  alertResolved: 'எச்சரிக்கை தீர்க்கப்பட்டது',
+  severity: 'தீவிரம்',
+  info: 'தகவல்',
+  critical: 'மிக தீவிரம்',
+
+  timeRange: 'நேர வரம்பு',
+  oneHour: '1 மணி நேரம்',
+  sixHours: '6 மணி நேரம்',
+  twentyFourHours: '24 மணி நேரம்',
+  sevenDays: '7 நாட்கள்',
+  thirtyDays: '30 நாட்கள்',
+  noData: 'தரவு இல்லை',
+
+  language: 'மொழி',
+  theme: 'தீம்',
+  save: 'சேமி',
+  saved: 'சேமிக்கப்பட்டது!',
+  cancel: 'ரத்துசெய்',
+  refresh: 'புதுப்பி',
+
+  demoMode: '⚠ டெமோ தரவு — ESP32 ஆஃப்லைன்',
+  demoModeDesc: 'உருவகமான சென்சார் தரவு காட்டப்படுகிறது. நேரடி வாசிப்பிற்கு ESP32 ஐ இணைக்கவும்.',
+
+  esp32Offline: 'ESP32 ஆஃப்லைன்',
+  cameraOfflineDesc: 'ESP32-CAM அணுக முடியவில்லை. நெட்வொர்க் இணைப்பை சரிபார்க்கவும்.',
+  loadingError: 'தரவு ஏற்றுவதில் தோல்வி',
+  retrying: 'மீண்டும் முயற்சிக்கிறது...',
+};
