@@ -4,6 +4,7 @@
   "description": "AI Smart Farming Assistant — Backend API",
   "main": "dist/server.js",
   "scripts": {
+    "postinstall": "npm run prisma:generate && npm run build",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
