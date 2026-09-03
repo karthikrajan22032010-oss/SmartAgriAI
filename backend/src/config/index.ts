@@ -7,6 +7,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Ensure DATABASE_URL has a fallback for cloud deployments (like Render)
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'file:./dev.db';
+}
+
 export const config = {
   // ── Server ─────────────────────────────────────────────
   port: parseInt(process.env.PORT || '3001', 10),

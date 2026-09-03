@@ -2,8 +2,8 @@
 // SERVER ENTRY POINT
 // ============================================================
 
-import app from './app';
 import { config } from './config';
+import app from './app';
 import { startHistoryRecording } from './services/historyService';
 import { logger } from './utils/logger';
 
