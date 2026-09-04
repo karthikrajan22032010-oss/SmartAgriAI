@@ -18,8 +18,8 @@ import { Language } from '../types';
 
 export function Dashboard() {
   const { t, language } = useLanguage();
-  const { data: sensors, loading, error, refetch } = useSensors(3000);
-  const { status } = useDeviceStatus(10000);
+  const { data: sensors, loading, error, refetch } = useSensors(1200);
+  const { status } = useDeviceStatus(4000);
   const { alerts, resolve } = useAlerts(15000);
   const { recommendation, loading: aiLoading, error: aiError, getRecommendation } = useAIRecommendation();
 

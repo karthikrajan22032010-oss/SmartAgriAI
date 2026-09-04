@@ -161,74 +161,95 @@ export async function getDeviceStatus(): Promise<DeviceStatus> {
   return finalStatus;
 }
 
-// ── Pump Control ───────────────────────────────────────────
+// ── Pump Control (Ultra-Fast Dual Dispatch) ─────────────────
 export async function pumpOn(): Promise<{ success: boolean; message: string }> {
   const esp32Ip = getEsp32LocalIp();
+
+  // 1. Direct local Wi-Fi call with ultra-low latency (~20ms)
+  if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
+    try {
+      const direct = await fetch(`http://${esp32Ip}/pump/on`, { signal: AbortSignal.timeout(600) });
+      if (direct.ok) {
+        // Sync with backend in background
+        api.post('/pump/on').catch(() => {});
+        return { success: true, message: 'Pump turned ON' };
+      }
+    } catch {
+      // Continue to cloud call
+    }
+  }
+
+  // 2. Cloud backend call (queued instantaneously)
   try {
     const res = await api.post('/pump/on');
     if (res.data && res.data.success) return res.data;
-  } catch {
-    // Direct call fallback from browser
-  }
+  } catch {}
 
-  if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
-    try {
-      const direct = await fetch(`http://${esp32Ip}/pump/on`, { signal: AbortSignal.timeout(2500) });
-      if (direct.ok) return { success: true, message: 'Pump turned ON via direct local Wi-Fi' };
-    } catch {
-      // Ignore
-    }
-  }
   return { success: false, message: 'Could not connect to pump controller' };
 }
 
 export async function pumpOff(): Promise<{ success: boolean; message: string }> {
   const esp32Ip = getEsp32LocalIp();
-  try {
-    const res = await api.post('/pump/off');
-    if (res.data && res.data.success) return res.data;
-  } catch {
-    // Direct call fallback from browser
-  }
 
   if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
     try {
-      const direct = await fetch(`http://${esp32Ip}/pump/off`, { signal: AbortSignal.timeout(2500) });
-      if (direct.ok) return { success: true, message: 'Pump turned OFF via direct local Wi-Fi' };
+      const direct = await fetch(`http://${esp32Ip}/pump/off`, { signal: AbortSignal.timeout(600) });
+      if (direct.ok) {
+        api.post('/pump/off').catch(() => {});
+        return { success: true, message: 'Pump turned OFF' };
+      }
     } catch {
-      // Ignore
+      // Continue
     }
   }
+
+  try {
+    const res = await api.post('/pump/off');
+    if (res.data && res.data.success) return res.data;
+  } catch {}
+
   return { success: false, message: 'Could not connect to pump controller' };
 }
 
 export async function setAutoMode(): Promise<{ success: boolean }> {
   const esp32Ip = getEsp32LocalIp();
+
+  if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
+    try {
+      const direct = await fetch(`http://${esp32Ip}/mode/auto`, { signal: AbortSignal.timeout(600) });
+      if (direct.ok) {
+        api.post('/mode/auto').catch(() => {});
+        return { success: true };
+      }
+    } catch {}
+  }
+
   try {
     const res = await api.post('/mode/auto');
     if (res.data && res.data.success) return res.data;
   } catch {}
-  if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
-    try {
-      const direct = await fetch(`http://${esp32Ip}/mode/auto`, { signal: AbortSignal.timeout(2500) });
-      if (direct.ok) return { success: true };
-    } catch {}
-  }
+
   return { success: false };
 }
 
 export async function setManualMode(): Promise<{ success: boolean }> {
   const esp32Ip = getEsp32LocalIp();
+
+  if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
+    try {
+      const direct = await fetch(`http://${esp32Ip}/mode/manual`, { signal: AbortSignal.timeout(600) });
+      if (direct.ok) {
+        api.post('/mode/manual').catch(() => {});
+        return { success: true };
+      }
+    } catch {}
+  }
+
   try {
     const res = await api.post('/mode/manual');
     if (res.data && res.data.success) return res.data;
   } catch {}
-  if (window.location.protocol === 'http:' || window.location.hostname === 'localhost') {
-    try {
-      const direct = await fetch(`http://${esp32Ip}/mode/manual`, { signal: AbortSignal.timeout(2500) });
-      if (direct.ok) return { success: true };
-    } catch {}
-  }
+
   return { success: false };
 }
 

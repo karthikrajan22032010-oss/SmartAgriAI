@@ -292,7 +292,7 @@ void sendSensorDataToCloud() {
 
   if (http.begin(client, CLOUD_SERVER_URL)) {
     http.addHeader("Content-Type", "application/json");
-    http.setTimeout(3000);
+    http.setTimeout(1500);
 
     DynamicJsonDocument doc(512);
     doc["soil1"]       = soil1Error ? (JsonVariant)nullptr : soil1Pct;
@@ -309,10 +309,27 @@ void sendSensorDataToCloud() {
     serializeJson(doc, jsonPayload);
 
     int httpResponseCode = http.POST(jsonPayload);
-    if (httpResponseCode > 0) {
-      Serial.printf("☁️ Cloud Telemetry Ingested → HTTP %d\n", httpResponseCode);
-    } else {
-      Serial.printf("☁️ Cloud Ingestion note: %s\n", http.errorToString(httpResponseCode).c_str());
+    if (httpResponseCode == 200) {
+      String resp = http.getString();
+      DynamicJsonDocument respDoc(512);
+      DeserializationError err = deserializeJson(respDoc, resp);
+      if (!err && respDoc.containsKey("command") && !respDoc["command"].isNull()) {
+        JsonObject cmd = respDoc["command"];
+        if (cmd.containsKey("pump") && !cmd["pump"].isNull()) {
+          bool targetPump = cmd["pump"];
+          if (targetPump != pumpState) {
+            pumpState = targetPump;
+            digitalWrite(RELAY_PIN, pumpState ? LOW : HIGH);
+            Serial.printf("⚡ Instant Cloud Command: Pump → %s\n", pumpState ? "ON" : "OFF");
+          }
+        }
+        if (cmd.containsKey("mode") && !cmd["mode"].isNull()) {
+          const char* m = cmd["mode"];
+          if (strcmp(m, "AUTO") == 0) isAutoMode = true;
+          else if (strcmp(m, "MANUAL") == 0) isAutoMode = false;
+          Serial.printf("⚡ Instant Cloud Command: Mode → %s\n", m);
+        }
+      }
     }
     http.end();
   }
@@ -447,7 +464,7 @@ void setup() {
 // MAIN LOOP
 // ============================================================
 unsigned long lastSensorRead = 0;
-const unsigned long SENSOR_INTERVAL = 3000;
+const unsigned long SENSOR_INTERVAL = 1000; // Fast 1-second real-time telemetry & command sync
 
 void loop() {
   server.handleClient();

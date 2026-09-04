@@ -60,6 +60,8 @@ export async function ingestSensorData(req: Request, res: Response): Promise<voi
 
   try {
     const { recordIngestedReading } = await import('../services/historyService');
+    const { getPendingCommand, clearPendingCommand } = await import('../services/esp32Service');
+
     const result = await recordIngestedReading({
       soil1: soil1 !== undefined ? Number(soil1) : null,
       soil2: soil2 !== undefined ? Number(soil2) : null,
@@ -72,7 +74,17 @@ export async function ingestSensorData(req: Request, res: Response): Promise<voi
       mode: mode === 'MANUAL' ? 'MANUAL' : 'AUTO',
     });
 
-    res.json({ success: true, message: 'Sensor data ingested successfully', data: result });
+    const cmd = getPendingCommand();
+    if (cmd) {
+      clearPendingCommand();
+    }
+
+    res.json({
+      success: true,
+      message: 'Sensor data ingested successfully',
+      data: result,
+      command: cmd || null,
+    });
   } catch (err) {
     logger.error('Sensor ingestion error', { error: (err as Error).message });
     res.status(500).json({ success: false, error: 'Ingestion failed', message: (err as Error).message });
