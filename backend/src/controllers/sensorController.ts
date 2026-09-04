@@ -54,3 +54,28 @@ export async function getLatestSensor(req: Request, res: Response): Promise<void
   }
   res.json({ success: true, data: reading });
 }
+
+export async function ingestSensorData(req: Request, res: Response): Promise<void> {
+  const { soil1, soil2, soilAverage, temperature, humidity, light, waterLevel, pump, mode } = req.body;
+
+  try {
+    const { recordIngestedReading } = await import('../services/historyService');
+    const result = await recordIngestedReading({
+      soil1: soil1 !== undefined ? Number(soil1) : null,
+      soil2: soil2 !== undefined ? Number(soil2) : null,
+      soilAverage: soilAverage !== undefined ? Number(soilAverage) : null,
+      temperature: temperature !== undefined && !isNaN(temperature) ? Number(temperature) : null,
+      humidity: humidity !== undefined && !isNaN(humidity) ? Number(humidity) : null,
+      light: light !== undefined ? Number(light) : null,
+      waterLevel: waterLevel !== undefined ? Number(waterLevel) : null,
+      pump: Boolean(pump),
+      mode: mode === 'MANUAL' ? 'MANUAL' : 'AUTO',
+    });
+
+    res.json({ success: true, message: 'Sensor data ingested successfully', data: result });
+  } catch (err) {
+    logger.error('Sensor ingestion error', { error: (err as Error).message });
+    res.status(500).json({ success: false, error: 'Ingestion failed', message: (err as Error).message });
+  }
+}
+

@@ -3,7 +3,7 @@
 // ============================================================
 
 import { Router } from 'express';
-import { getCurrentSensors, getSensorHistory, getLatestSensor } from '../controllers/sensorController';
+import { getCurrentSensors, getSensorHistory, getLatestSensor, ingestSensorData } from '../controllers/sensorController';
 import { turnPumpOn, turnPumpOff, setAutoMode, setManualMode, getPumpStatus } from '../controllers/pumpController';
 import { getDeviceStatus, getHealthCheck } from '../controllers/deviceController';
 import { listAlerts, resolveAlertById } from '../controllers/alertController';
@@ -22,6 +22,8 @@ router.get('/device/status', getDeviceStatus);
 // ── Sensor Data ────────────────────────────────────
 router.get('/sensors/current', getCurrentSensors);
 router.get('/sensors/latest', getLatestSensor);
+router.post('/sensors/data', ingestSensorData);
+router.post('/sensors/ingest', ingestSensorData);
 router.get('/readings/history', getSensorHistory);
 router.get('/readings', getSensorHistory);  // alias
 

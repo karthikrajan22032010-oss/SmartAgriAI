@@ -36,6 +36,7 @@ async function loadDeviceId(): Promise<void> {
  * Record one sensor reading snapshot.
  */
 async function recordReading(): Promise<void> {
+  if (!esp32DeviceId) await loadDeviceId();
   if (!esp32DeviceId) return;
 
   try {
@@ -60,23 +61,71 @@ async function recordReading(): Promise<void> {
     // Update device status
     await prisma.device.update({
       where: { id: esp32DeviceId },
-      data: { status: 'ONLINE', lastSeen: new Date() },
-    });
+      data: { status: data.isDemo ? 'OFFLINE' : 'ONLINE', lastSeen: new Date() },
+    }).catch(() => {});
 
     // Analyze and generate alerts
     await analyzeAndAlert(data);
 
     logger.debug('Sensor reading recorded');
   } catch (err) {
-    logger.warn('History: failed to record sensor reading', { error: (err as Error).message });
-
-    // Mark device offline
-    if (esp32DeviceId) {
-      await prisma.device
-        .update({ where: { id: esp32DeviceId }, data: { status: 'OFFLINE' } })
-        .catch(() => {});
+    // If offline in cloud and demo mode enabled, don't spam errors
+    if (!config.demoMode) {
+      logger.warn('History: ESP32 offline, waiting for connection', { error: (err as Error).message });
     }
   }
+}
+
+/**
+ * Record reading directly pushed by hardware or gateway.
+ */
+export async function recordIngestedReading(data: {
+  soil1: number | null;
+  soil2: number | null;
+  soilAverage: number | null;
+  temperature: number | null;
+  humidity: number | null;
+  light: number | null;
+  waterLevel: number | null;
+  pump: boolean;
+  mode: 'AUTO' | 'MANUAL';
+}) {
+  if (!esp32DeviceId) await loadDeviceId();
+  const deviceId = esp32DeviceId || 'default-esp32';
+
+  const decision = evaluateIrrigation({
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+
+  const reading = await prisma.sensorReading.create({
+    data: {
+      soil1: data.soil1,
+      soil2: data.soil2,
+      soilAverage: data.soilAverage,
+      temperature: data.temperature,
+      humidity: data.humidity,
+      light: data.light,
+      waterLevel: data.waterLevel,
+      pumpState: data.pump,
+      mode: data.mode,
+      deviceId,
+    },
+  });
+
+  if (esp32DeviceId) {
+    await prisma.device.update({
+      where: { id: esp32DeviceId },
+      data: { status: 'ONLINE', lastSeen: new Date() },
+    }).catch(() => {});
+  }
+
+  await analyzeAndAlert({
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+
+  return reading;
 }
 
 /**
