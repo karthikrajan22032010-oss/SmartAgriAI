@@ -59,6 +59,27 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+// ── Root Endpoint ─────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    name: '🌱 AI Smart Farming Assistant API',
+    version: '1.0.0',
+    message: 'SmartAgriAI Cloud Backend API is active and running',
+    endpoints: {
+      health: '/api/health',
+      deviceStatus: '/api/device/status',
+      currentSensors: '/api/sensors/current',
+      history: '/api/readings/history',
+      alerts: '/api/alerts',
+      aiChat: '/api/ai/ask',
+      cameraStatus: '/api/camera/status',
+    },
+    documentation: 'https://github.com/karthikrajan22032010-oss/SmartAgriAI',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ── API Routes ────────────────────────────────────────────
 app.use('/api', routes);
 
