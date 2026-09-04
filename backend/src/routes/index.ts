@@ -7,7 +7,7 @@ import { getCurrentSensors, getSensorHistory, getLatestSensor } from '../control
 import { turnPumpOn, turnPumpOff, setAutoMode, setManualMode, getPumpStatus } from '../controllers/pumpController';
 import { getDeviceStatus, getHealthCheck } from '../controllers/deviceController';
 import { listAlerts, resolveAlertById } from '../controllers/alertController';
-import { getRecommendation } from '../controllers/aiController';
+import { getRecommendation, askQuestion } from '../controllers/aiController';
 import { getCameraCapture, getCameraStatusHandler, toggleLight, setResolution } from '../controllers/cameraController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 
@@ -19,7 +19,7 @@ router.get('/health', getHealthCheck);
 // ── Device Status ──────────────────────────────────────────
 router.get('/device/status', getDeviceStatus);
 
-// ── Sensor Data ────────────────────────────────────────────
+// ── Sensor Data ────────────────────────────────────
 router.get('/sensors/current', getCurrentSensors);
 router.get('/sensors/latest', getLatestSensor);
 router.get('/readings/history', getSensorHistory);
@@ -44,6 +44,8 @@ router.post('/alerts/:id/resolve', resolveAlertById);
 
 // ── AI ─────────────────────────────────────────────────────
 router.post('/ai/recommendation', getRecommendation);
+router.post('/ai/ask', askQuestion);
+router.post('/ai/chat', askQuestion);
 
 // ── Settings ───────────────────────────────────────────────
 router.get('/settings', getSettings);

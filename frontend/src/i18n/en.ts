@@ -134,6 +134,28 @@ export const en = {
   cancel: 'Cancel',
   refresh: 'Refresh',
 
+  // ── Rain & Weather ───────────────────────────────────
+  rainProbability: 'Rain Probability',
+  rainAlert: 'Possibility of Rain Alert',
+  rainHigh: 'Rain Likely (🌧️ High Alert)',
+  rainModerate: 'Moderate Chance (Cloudy)',
+  rainLow: 'Low Chance (Clear & Dry)',
+  rainDelayIrrigation: 'Rain is likely. Postpone irrigation to save water.',
+  rainNormalIrrigation: 'Dry conditions. Maintain regular watering.',
+
+  // ── AI Chat ───────────────────────────────────────────
+  askAI: 'Ask AI Farm Assistant',
+  askAIPlaceholder: 'Ask anything about crops, soil, rain probability, pest control...',
+  askAIButton: 'Ask Question',
+  aiTyping: 'AI is thinking...',
+  suggestedQuestions: 'Quick Questions',
+
+  // ── Camera HD ─────────────────────────────────────────
+  hdMode: 'HD Mode',
+  hdStream: 'HD Stream',
+  expandStream: 'Expand',
+  compactStream: 'Compact',
+
   // ── Demo ──────────────────────────────────────────────
   demoMode: '⚠ DEMO DATA — ESP32 Offline',
   demoModeDesc: 'Showing simulated sensor data. Connect ESP32 for live readings.',

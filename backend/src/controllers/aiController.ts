@@ -75,3 +75,28 @@ export async function getRecommendation(req: Request, res: Response): Promise<vo
     });
   }
 }
+
+export async function askQuestion(req: Request, res: Response): Promise<void> {
+  const { question, sensorData, language } = req.body;
+  if (!question || typeof question !== 'string') {
+    res.status(400).json({ success: false, error: 'Question is required' });
+    return;
+  }
+
+  try {
+    const response = await import('../services/aiService').then(m => m.askAIQuestion({
+      question,
+      sensorData,
+      language: language || 'en',
+    }));
+    res.json({ success: true, data: response });
+  } catch (err) {
+    logger.error('AI askQuestion error', { error: (err as Error).message });
+    res.status(500).json({
+      success: false,
+      error: 'AI chat error',
+      message: (err as Error).message,
+    });
+  }
+}
+

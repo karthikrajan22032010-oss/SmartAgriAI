@@ -209,3 +209,124 @@ export async function getAIRecommendation(
 export function isAIAvailable(): boolean {
   return aiAvailable;
 }
+
+export interface AskQuestionRequest {
+  question: string;
+  sensorData?: {
+    soilAverage?: number | null;
+    soil1?: number | null;
+    soil2?: number | null;
+    temperature?: number | null;
+    humidity?: number | null;
+    waterLevel?: number | null;
+    light?: number | null;
+  };
+  language?: string;
+}
+
+export interface AskQuestionResponse {
+  answer: string;
+  rainForecast?: {
+    probability: number;
+    alert: string;
+    advice: string;
+  };
+  suggestedActions?: string[];
+}
+
+export async function askAIQuestion(req: AskQuestionRequest): Promise<AskQuestionResponse> {
+  const lang = req.language === 'ta' ? 'Tamil' : req.language === 'hi' ? 'Hindi' : 'English';
+  const sensors = req.sensorData || {};
+  
+  // Calculate rain probability based on humidity
+  const hum = sensors.humidity !== null && sensors.humidity !== undefined ? Number(sensors.humidity) : 60;
+  let rainProb = 15;
+  if (hum < 40) rainProb = Math.round(hum * 0.35);
+  else if (hum < 65) rainProb = Math.round(20 + (hum - 40) * 1.2);
+  else if (hum < 80) rainProb = Math.round(50 + (hum - 65) * 1.8);
+  else rainProb = Math.min(98, Math.round(77 + (hum - 80) * 1.05));
+
+  let rainAlert = rainProb > 70 ? 'HIGH_RAIN_ALERT' : rainProb > 40 ? 'MODERATE_RAIN_POSSIBILITY' : 'LOW_RAIN_CHANCE';
+  let rainAdvice = rainProb > 70 
+    ? 'High humidity indicates rain is very likely. Delay manual irrigation to conserve water and prevent waterlogging.'
+    : rainProb > 40 
+    ? 'Moderate cloudiness and humidity. Monitor soil moisture before starting pump.'
+    : 'Clear and dry weather expected. Ensure regular irrigation cycle.';
+
+  if (genAI && aiAvailable) {
+    try {
+      const model = genAI.getGenerativeModel({ model: config.aiModel });
+      const prompt = `You are an expert AI Agricultural Consultant and Smart Farm Assistant.
+A farmer has asked you a question about their farm. Answer clearly, accurately, and politely with actionable advice.
+
+CURRENT FARM SENSOR DATA:
+- Soil Moisture: ${sensors.soilAverage ?? 'N/A'}% (Sensor 1: ${sensors.soil1 ?? 'N/A'}%, Sensor 2: ${sensors.soil2 ?? 'N/A'}%)
+- Temperature: ${sensors.temperature ?? 'N/A'}°C
+- Humidity: ${sensors.humidity ?? 'N/A'}%
+- Calculated Rain Probability: ${rainProb}% (${rainAlert})
+- Water Tank Level: ${sensors.waterLevel ?? 'N/A'}%
+- Light Intensity: ${sensors.light ?? 'N/A'} ADC
+
+FARMER'S QUESTION:
+"${req.question}"
+
+INSTRUCTIONS:
+1. Respond in ${lang} language.
+2. Use clear formatting, bullet points, and emojis.
+3. Incorporate their live sensor data directly if relevant to the question.
+4. Keep the response practical, direct, and farmer-friendly.`;
+
+      const result = await model.generateContent(prompt);
+      const answer = result.response.text().trim();
+      return {
+        answer,
+        rainForecast: {
+          probability: rainProb,
+          alert: rainAlert,
+          advice: rainAdvice
+        }
+      };
+    } catch (err) {
+      logger.error('Gemini Q&A error, falling back to rule-based', { error: (err as Error).message });
+    }
+  }
+
+  // Fallback intelligent response generator
+  const q = req.question.toLowerCase();
+  let fallbackAnswer = '';
+
+  if (q.includes('rain') || q.includes('rainy') || q.includes('weather') || q.includes('மழை') || q.includes('बारिश')) {
+    if (lang === 'Tamil') {
+      fallbackAnswer = `🌧️ **மழை சாத்தியக்கூறு கணிப்பு:**\n- தற்போதைய ஈரப்பதம்: **${sensors.humidity ?? 65}%**\n- மழை வாய்ப்பு: **${rainProb}%**\n- பரிந்துரை: ${rainProb > 65 ? 'மழை பெய்வதற்கான அதிக வாய்ப்புள்ளது. நீர்ப்பாசனத்தை தற்காலிகமாக ஒத்திவைக்கவும்.' : 'மழை வாய்ப்பு குறைவு. வழக்கமான நீர்ப்பாசனத்தை தொடரலாம்.'}`;
+    } else if (lang === 'Hindi') {
+      fallbackAnswer = `🌧️ **बारिश की संभावना का अनुमान:**\n- वर्तमान आर्द्रता (Humidity): **${sensors.humidity ?? 65}%**\n- बारिश की संभावना: **${rainProb}%**\n- सलाह: ${rainProb > 65 ? 'बारिश की संभावना अधिक है। पानी बचाने के लिए सिंचाई को कुछ समय के लिए रोकें।' : 'बारिश की संभावना कम है। नियमित सिंचाई जारी रखें।'}`;
+    } else {
+      fallbackAnswer = `🌧️ **Rain Forecast & Possibility Alert:**\n- Current Humidity: **${sensors.humidity ?? 65}%**\n- Calculated Rain Probability: **${rainProb}%**\n- Advisory: ${rainAdvice}`;
+    }
+  } else if (q.includes('pump') || q.includes('water') || q.includes('irrigation') || q.includes('பாசனம்') || q.includes('सिंचाई')) {
+    if (lang === 'Tamil') {
+      fallbackAnswer = `💧 **நீர்ப்பாசன ஆலோசனை:**\n- மண் ஈரப்பதம்: **${sensors.soilAverage ?? 50}%**\n- நீர் தொட்டி அளவு: **${sensors.waterLevel ?? 60}%**\n- நிலை: ${(sensors.soilAverage ?? 50) < 30 ? 'மண் வறண்டுள்ளது. மோட்டாரை இயக்கவும்.' : 'மண் ஈரப்பதம் போதுமானது.'}`;
+    } else if (lang === 'Hindi') {
+      fallbackAnswer = `💧 **सिंचाई सलाह:**\n- मिट्टी की नमी: **${sensors.soilAverage ?? 50}%**\n- पानी की टंकी स्तर: **${sensors.waterLevel ?? 60}%**\n- सलाह: ${(sensors.soilAverage ?? 50) < 30 ? 'मिट्टी सूखी है, पंप चालू करने की सिफारिश की जाती है।' : 'मिट्टी में पर्याप्त नमी है।'}`;
+    } else {
+      fallbackAnswer = `💧 **Irrigation Advisory:**\n- Soil Moisture: **${sensors.soilAverage ?? 50}%**\n- Water Tank Level: **${sensors.waterLevel ?? 60}%**\n- Pump Recommendation: ${(sensors.soilAverage ?? 50) < 30 ? 'Soil is dry (< 30%). Start irrigation.' : 'Soil moisture is optimal. Irrigation not required right now.'}`;
+    }
+  } else {
+    if (lang === 'Tamil') {
+      fallbackAnswer = `🌱 **விவசாய வழிகாட்டுதல்:**\nஉங்கள் பண்ணை நிலைமைகள்:\n- மண் ஈரப்பதம்: **${sensors.soilAverage ?? 50}%**\n- வெப்பநிலை: **${sensors.temperature ?? 28}°C**\n- காற்றின் ஈரப்பதம்: **${sensors.humidity ?? 60}%**\n- மழை வாய்ப்பு: **${rainProb}%**\nபயிர்களை ஆரோக்கியமாக பராமரிக்க வழக்கமான கண்காணிப்பை தொடரவும்.`;
+    } else if (lang === 'Hindi') {
+      fallbackAnswer = `🌱 **कृषि मार्गदर्शन:**\nआपके खेत की वर्तमान स्थिति:\n- मिट्टी की नमी: **${sensors.soilAverage ?? 50}%**\n- तापमान: **${sensors.temperature ?? 28}°C**\n- आर्द्रता (Humidity): **${sensors.humidity ?? 60}%**\n- बारिश की संभावना: **${rainProb}%**\nफसलों के अच्छे स्वास्थ्य के लिए नियमित निगरानी रखें।`;
+    } else {
+      fallbackAnswer = `🌱 **Smart Agri Assistant Insight:**\n- Soil Moisture: **${sensors.soilAverage ?? 50}%**\n- Temperature: **${sensors.temperature ?? 28}°C**\n- Humidity: **${sensors.humidity ?? 60}%**\n- Rain Probability: **${rainProb}%**\n\nFor your question "*${req.question}*", keep soil moisture balanced between 40%-65% and monitor rain forecasts before irrigating.`;
+    }
+  }
+
+  return {
+    answer: fallbackAnswer,
+    rainForecast: {
+      probability: rainProb,
+      alert: rainAlert,
+      advice: rainAdvice
+    }
+  };
+}

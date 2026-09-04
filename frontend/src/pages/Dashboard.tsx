@@ -7,6 +7,7 @@ import { TemperatureCard } from '../components/TemperatureCard';
 import { HumidityCard } from '../components/HumidityCard';
 import { LightCard } from '../components/LightCard';
 import { WaterLevelCard } from '../components/WaterLevelCard';
+import { RainCard } from '../components/RainCard';
 import { PumpCard } from '../components/PumpCard';
 import { CameraCard } from '../components/CameraCard';
 import { SystemStatus } from '../components/SystemStatus';
@@ -60,6 +61,7 @@ export function Dashboard() {
         <HumidityCard value={sensors?.humidity ?? null} status={sensors?.humidityStatus} />
         <LightCard value={sensors?.light ?? null} status={sensors?.lightStatus} />
         <WaterLevelCard value={sensors?.waterLevel ?? null} status={sensors?.waterStatus} />
+        <RainCard humidity={sensors?.humidity ?? null} temperature={sensors?.temperature ?? null} />
       </div>
 
       {/* Pump + Camera */}

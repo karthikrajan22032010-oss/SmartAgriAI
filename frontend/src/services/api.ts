@@ -81,7 +81,6 @@ export async function resolveAlert(id: string): Promise<boolean> {
   return res.data.success;
 }
 
-// ── AI Recommendations ─────────────────────────────────────
 export async function getAIRecommendation(
   sensorData: SensorData,
   language: Language = 'en'
@@ -94,6 +93,19 @@ export async function getAIRecommendation(
     humidity: sensorData.humidity,
     waterLevel: sensorData.waterLevel,
     light: sensorData.light,
+    language,
+  });
+  return res.data.data;
+}
+
+export async function askAIQuestion(
+  question: string,
+  sensorData?: SensorData | null,
+  language: Language = 'en'
+): Promise<{ answer: string; rainForecast?: { probability: number; alert: string; advice: string } }> {
+  const res = await api.post('/ai/ask', {
+    question,
+    sensorData: sensorData || undefined,
     language,
   });
   return res.data.data;
