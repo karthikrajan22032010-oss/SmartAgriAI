@@ -59,29 +59,57 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// ── Root Endpoint ─────────────────────────────────────────
-app.get('/', (req, res) => {
-  res.json({
-    status: 'online',
-    name: '🌱 AI Smart Farming Assistant API',
-    version: '1.0.0',
-    message: 'SmartAgriAI Cloud Backend API is active and running',
-    endpoints: {
-      health: '/api/health',
-      deviceStatus: '/api/device/status',
-      currentSensors: '/api/sensors/current',
-      history: '/api/readings/history',
-      alerts: '/api/alerts',
-      aiChat: '/api/ai/ask',
-      cameraStatus: '/api/camera/status',
-    },
-    documentation: 'https://github.com/karthikrajan22032010-oss/SmartAgriAI',
-    timestamp: new Date().toISOString(),
-  });
-});
+import path from 'path';
+import fs from 'fs';
 
 // ── API Routes ────────────────────────────────────────────
 app.use('/api', routes);
+
+// ── Serve Web Dashboard Frontend ─────────────────────────
+const possibleStaticDirs = [
+  path.join(__dirname, '../public'),
+  path.join(process.cwd(), 'public'),
+  path.join(process.cwd(), 'backend/public'),
+  path.join(__dirname, '../../frontend/dist'),
+];
+
+let publicDir: string | null = null;
+for (const dir of possibleStaticDirs) {
+  if (fs.existsSync(dir) && fs.existsSync(path.join(dir, 'index.html'))) {
+    publicDir = dir;
+    break;
+  }
+}
+
+if (publicDir) {
+  logger.info(`Serving Web Dashboard frontend from: ${publicDir}`);
+  app.use(express.static(publicDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(publicDir!, 'index.html'));
+  });
+} else {
+  // If no static frontend, provide API status directory
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'online',
+      name: '🌱 AI Smart Farming Assistant API',
+      version: '1.0.0',
+      message: 'SmartAgriAI Cloud Backend API is active and running',
+      endpoints: {
+        health: '/api/health',
+        deviceStatus: '/api/device/status',
+        currentSensors: '/api/sensors/current',
+        history: '/api/readings/history',
+        alerts: '/api/alerts',
+        aiChat: '/api/ai/ask',
+        cameraStatus: '/api/camera/status',
+      },
+      documentation: 'https://github.com/karthikrajan22032010-oss/SmartAgriAI',
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
 
 // ── 404 Handler ───────────────────────────────────────────
 app.use((req, res) => {

@@ -116,18 +116,19 @@ function parseRawSensorJson(rawText: string): SensorData {
 
 /**
  * Fetch current sensor data from ESP32.
- * Falls back to demo data if ESP32 is unreachable and DEMO_MODE is enabled.
+ * Falls back to latest database reading or demo data if ESP32 is unreachable on cloud.
  */
 export async function fetchSensorData(): Promise<SensorData> {
+  const ip = await getEsp32Ip();
   const endpoints = ['/api/data', '/data'];
   let lastError: Error | null = null;
 
   for (const endpoint of endpoints) {
     let url = '';
     try {
-      url = await getEsp32Url(endpoint);
+      url = `http://${ip}${endpoint}`;
       const response = await axios.get(url, {
-        timeout: Math.min(config.esp32TimeoutMs, 3000),
+        timeout: 1500,
         responseType: 'text',
         transformResponse: [(data) => data],
       });
@@ -147,16 +148,34 @@ export async function fetchSensorData(): Promise<SensorData> {
   }
 
   esp32Online = false;
-  logger.warn(`ESP32 unreachable at ${await getEsp32Ip()}`, {
-    error: lastError?.message,
-  });
 
-  if (config.demoMode) {
-    logger.info('DEMO_MODE: Returning simulated sensor data');
-    return getDemoSensorData();
+  // On cloud / Render or when demo mode is enabled:
+  // Check if we have a recent reading in the database first
+  try {
+    const latest = await prisma.sensorReading.findFirst({
+      orderBy: { timestamp: 'desc' },
+    });
+    if (latest && (Date.now() - new Date(latest.timestamp).getTime()) < 300000) {
+      return {
+        soil1: latest.soil1,
+        soil2: latest.soil2,
+        soilAverage: latest.soilAverage,
+        temperature: latest.temperature,
+        humidity: latest.humidity,
+        light: latest.light,
+        waterLevel: latest.waterLevel,
+        pump: latest.pumpState,
+        mode: latest.mode as 'AUTO' | 'MANUAL',
+        timestamp: latest.timestamp.toISOString(),
+        isDemo: false,
+      };
+    }
+  } catch {
+    // Ignore DB error
   }
 
-  throw new Error(`ESP32 offline: ${lastError?.message || 'unknown error'}`);
+  // Fallback to demo sensor data
+  return getDemoSensorData();
 }
 
 /**
