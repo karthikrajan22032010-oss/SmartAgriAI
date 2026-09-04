@@ -8,7 +8,7 @@ import { turnPumpOn, turnPumpOff, setAutoMode, setManualMode, getPumpStatus } fr
 import { getDeviceStatus, getHealthCheck } from '../controllers/deviceController';
 import { listAlerts, resolveAlertById } from '../controllers/alertController';
 import { getRecommendation, askQuestion } from '../controllers/aiController';
-import { getCameraCapture, getCameraStatusHandler, toggleLight, setResolution, getLatestSnapshotHandler, ingestSnapshot } from '../controllers/cameraController';
+import { getCameraCapture, getCameraStatusHandler, toggleLight, setResolution, getLatestSnapshotHandler, ingestSnapshot, cameraHeartbeat } from '../controllers/cameraController';
 import { getSettings, updateSettings } from '../controllers/settingsController';
 
 const router = Router();
@@ -38,6 +38,9 @@ router.post('/mode/manual', setManualMode);
 router.get('/camera/capture', getCameraCapture);
 router.get('/camera/latest', getLatestSnapshotHandler);
 router.post('/camera/snapshot', ingestSnapshot);
+router.post('/camera/heartbeat', cameraHeartbeat);
+router.get('/camera/heartbeat', cameraHeartbeat);
+router.post('/camera/ping', cameraHeartbeat);
 router.get('/camera/status', getCameraStatusHandler);
 router.post('/camera/light', toggleLight);
 router.post('/camera/resolution', setResolution);

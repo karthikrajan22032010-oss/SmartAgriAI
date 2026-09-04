@@ -57,17 +57,30 @@ export async function ingestSnapshot(req: Request, res: Response): Promise<void>
       buffer = Buffer.from(base64Data, 'base64');
     }
 
-    if (!buffer || buffer.length === 0) {
-      res.status(400).json({ success: false, error: 'No image data provided' });
+    const { ip } = req.body || {};
+    const clientIp = ip || req.query.ip || (typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'].split(',')[0].trim() : undefined);
+
+    if (buffer && buffer.length > 0) {
+      updateCameraSnapshot(buffer, clientIp);
+      res.json({ success: true, message: 'Camera snapshot received', size: buffer.length });
       return;
     }
 
-    updateCameraSnapshot(buffer, req.ip || undefined);
-    res.json({ success: true, message: 'Camera snapshot received', size: buffer.length });
+    const { recordCameraHeartbeat } = await import('../services/cameraService');
+    recordCameraHeartbeat(clientIp);
+    res.json({ success: true, message: 'Camera ping received' });
   } catch (err) {
     logger.error('Failed to ingest camera snapshot', { error: (err as Error).message });
     res.status(500).json({ success: false, error: (err as Error).message });
   }
+}
+
+export async function cameraHeartbeat(req: Request, res: Response): Promise<void> {
+  const { ip } = req.body || {};
+  const clientIp = ip || req.query.ip || (typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'].split(',')[0].trim() : undefined);
+  const { recordCameraHeartbeat } = await import('../services/cameraService');
+  recordCameraHeartbeat(typeof clientIp === 'string' ? clientIp : undefined);
+  res.json({ success: true, message: 'Camera heartbeat received', status: 'online' });
 }
 
 export async function getCameraStatusHandler(req: Request, res: Response): Promise<void> {

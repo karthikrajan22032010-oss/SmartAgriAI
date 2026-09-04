@@ -23,8 +23,8 @@
 // ============================================================
 // 1. WIFI CONFIGURATION
 // ============================================================
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";       // <-- CHANGE THIS TO YOUR WIFI SSID
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";   // <-- CHANGE THIS TO YOUR WIFI PASSWORD
+const char* WIFI_SSID     = "Hacker hidden  Network1";
+const char* WIFI_PASSWORD = "smkr2010";
 
 // CLOUD SERVER INGESTION (Pushes live sensor readings to your website)
 // Default Render Cloud URL:

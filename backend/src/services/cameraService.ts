@@ -16,11 +16,21 @@ let cameraLastSeen: Date | null = null;
 let currentCameraIp = '192.168.100.94';
 let latestSnapshotBuffer: Buffer | null = null;
 
+export function recordCameraHeartbeat(ip?: string) {
+  cameraOnline = true;
+  cameraLastSeen = new Date();
+  if (ip && !ip.includes('::') && !ip.startsWith('127.')) {
+    currentCameraIp = ip;
+  }
+}
+
 export function updateCameraSnapshot(buffer: Buffer, ip?: string) {
   latestSnapshotBuffer = buffer;
   cameraOnline = true;
   cameraLastSeen = new Date();
-  if (ip) currentCameraIp = ip;
+  if (ip && !ip.includes('::') && !ip.startsWith('127.')) {
+    currentCameraIp = ip;
+  }
 }
 
 export function getLatestSnapshot(): Buffer | null {

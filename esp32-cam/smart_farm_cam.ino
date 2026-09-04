@@ -7,7 +7,7 @@
 //   - Flashlight LED Control on GPIO 4 (/light/on, /light/off, /light/toggle)
 //   - Multi-client non-blocking HTTP server (esp_http_server)
 //   - Automatic DHCP Wi-Fi Connection
-//   - Optional Cloud Snapshot Sync to Render Website
+//   - Automatic Cloud Heartbeat & Live Snapshot Upload to Render
 // ============================================================
 
 #include <Arduino.h>
@@ -18,13 +18,14 @@
 #include "esp_http_server.h"
 
 // ============================================================
-// 1. WIFI CONFIGURATION
+// 1. WIFI CONFIGURATION (Configured with your Wi-Fi credentials)
 // ============================================================
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";       // <-- CHANGE TO YOUR WIFI SSID
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";   // <-- CHANGE TO YOUR WIFI PASSWORD
+const char* WIFI_SSID     = "Hacker hidden  Network1";
+const char* WIFI_PASSWORD = "smkr2010";
 
-// CLOUD SERVER SNAPSHOT SYNC (Pushes live camera snapshots to your Render cloud website)
-const char* CLOUD_SNAPSHOT_URL = "https://smartagriai.onrender.com/api/camera/snapshot";
+// CLOUD SERVER URL (Pushes live camera status & snapshots to Render)
+const char* CLOUD_SNAPSHOT_URL  = "https://smartagriai.onrender.com/api/camera/snapshot";
+const char* CLOUD_HEARTBEAT_URL = "https://smartagriai.onrender.com/api/camera/heartbeat";
 
 // Flash LED pin on AI Thinker ESP32-CAM
 #define FLASH_LED_PIN 4
@@ -129,7 +130,6 @@ static esp_err_t stream_handler(httpd_req_t* req) {
   while (true) {
     fb = esp_camera_fb_get();
     if (!fb) {
-      Serial.println("Camera capture failed for stream");
       res = ESP_FAIL;
       break;
     }
@@ -303,6 +303,28 @@ void sendSnapshotToCloud() {
   esp_camera_fb_return(fb);
 }
 
+// Send quick heartbeat to cloud to mark camera online
+void sendHeartbeatToCloud() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (!CLOUD_HEARTBEAT_URL || strlen(CLOUD_HEARTBEAT_URL) == 0) return;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  if (http.begin(client, CLOUD_HEARTBEAT_URL)) {
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(3000);
+
+    String body = "{\"ip\":\"" + WiFi.localIP().toString() + "\",\"status\":\"online\"}";
+    int httpCode = http.POST(body);
+    if (httpCode > 0) {
+      Serial.printf("🟢 Camera Heartbeat Synced → HTTP %d\n", httpCode);
+    }
+    http.end();
+  }
+}
+
 // ============================================================
 // SETUP
 // ============================================================
@@ -338,6 +360,7 @@ void setup() {
     Serial.printf("Snapshot Capture:  http://%s/capture\n", WiFi.localIP().toString().c_str());
     Serial.printf("Light Control:     http://%s/light/toggle\n", WiFi.localIP().toString().c_str());
     startCameraServer();
+    sendHeartbeatToCloud();
   } else {
     Serial.println("\n❌ WiFi connection failed. Retrying in background...");
   }
@@ -347,6 +370,7 @@ void setup() {
 // LOOP
 // ============================================================
 unsigned long lastCloudSnapshot = 0;
+unsigned long lastHeartbeat = 0;
 
 void loop() {
   // WiFi reconnection check
@@ -359,13 +383,20 @@ void loop() {
       WiFi.reconnect();
     }
   } else {
-    // Periodically upload snapshot to cloud (every 5 seconds)
     unsigned long now = millis();
-    if (now - lastCloudSnapshot >= 5000) {
+
+    // Heartbeat every 10 seconds
+    if (now - lastHeartbeat >= 10000) {
+      lastHeartbeat = now;
+      sendHeartbeatToCloud();
+    }
+
+    // Periodically upload snapshot to cloud (every 4 seconds)
+    if (now - lastCloudSnapshot >= 4000) {
       lastCloudSnapshot = now;
       sendSnapshotToCloud();
     }
   }
 
-  delay(500);
+  delay(200);
 }
