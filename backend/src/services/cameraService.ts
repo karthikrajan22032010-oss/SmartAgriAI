@@ -14,6 +14,18 @@ const prisma = new PrismaClient();
 let cameraOnline = false;
 let cameraLastSeen: Date | null = null;
 let currentCameraIp = '192.168.100.94';
+let latestSnapshotBuffer: Buffer | null = null;
+
+export function updateCameraSnapshot(buffer: Buffer, ip?: string) {
+  latestSnapshotBuffer = buffer;
+  cameraOnline = true;
+  cameraLastSeen = new Date();
+  if (ip) currentCameraIp = ip;
+}
+
+export function getLatestSnapshot(): Buffer | null {
+  return latestSnapshotBuffer;
+}
 
 export async function getCameraIp(): Promise<string> {
   try {
@@ -63,10 +75,14 @@ function checkTcpPort(host: string, port = 80, timeoutMs = 1500): Promise<boolea
 }
 
 /**
- * Fetch the latest JPEG image from ESP32-CAM.
+ * Fetch the latest JPEG image from ESP32-CAM or in-memory snapshot cache.
  * Returns a Buffer containing JPEG bytes.
  */
 export async function fetchCameraCapture(): Promise<Buffer> {
+  if (latestSnapshotBuffer && cameraLastSeen && (Date.now() - cameraLastSeen.getTime() < 60000)) {
+    return latestSnapshotBuffer;
+  }
+
   let url = '';
   try {
     url = await getCameraUrl('/capture');
@@ -80,9 +96,14 @@ export async function fetchCameraCapture(): Promise<Buffer> {
 
     cameraOnline = true;
     cameraLastSeen = new Date();
+    latestSnapshotBuffer = Buffer.from(response.data);
 
-    return Buffer.from(response.data);
+    return latestSnapshotBuffer;
   } catch (err) {
+    if (latestSnapshotBuffer) {
+      return latestSnapshotBuffer;
+    }
+
     // If capture failed, check if camera is alive
     const ip = await getCameraIp();
     const isAlive = (await checkTcpPort(ip, 80, 1000)) || (await pingHost(ip));
@@ -100,9 +121,14 @@ export async function fetchCameraCapture(): Promise<Buffer> {
 }
 
 /**
- * Check camera health. Uses TCP port check and ICMP ping so live /stream won't block it.
+ * Check camera health. Uses snapshot timestamp, TCP port check, and ICMP ping.
  */
 export async function checkCameraHealth(): Promise<boolean> {
+  if (cameraLastSeen && (Date.now() - cameraLastSeen.getTime() < 60000)) {
+    cameraOnline = true;
+    return true;
+  }
+
   try {
     const ip = await getCameraIp();
     const isPortOpen = await checkTcpPort(ip, 80, 1000);
@@ -128,10 +154,12 @@ export async function checkCameraHealth(): Promise<boolean> {
 }
 
 export function getCameraStatus() {
+  const isRecent = cameraLastSeen ? (Date.now() - cameraLastSeen.getTime() < 60000) : false;
   return {
-    online: cameraOnline,
+    online: cameraOnline || isRecent,
     ip: currentCameraIp,
     captureUrl: `/api/camera/capture`,
+    latestUrl: `/api/camera/latest`,
     lastSeen: cameraLastSeen ? cameraLastSeen.toISOString() : null,
   };
 }

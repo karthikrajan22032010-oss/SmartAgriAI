@@ -15,8 +15,20 @@ const prisma = new PrismaClient();
 let esp32Online = false;
 let esp32LastSeen: Date | null = null;
 let currentEsp32Ip = '192.168.100.58';
+let latestLiveSensorData: SensorData | null = null;
 
 import net from 'net';
+
+export function updateEsp32IngestedData(data: SensorData, ip?: string) {
+  esp32Online = true;
+  esp32LastSeen = new Date();
+  latestLiveSensorData = {
+    ...data,
+    isDemo: false,
+    timestamp: new Date().toISOString(),
+  };
+  if (ip) currentEsp32Ip = ip;
+}
 
 async function getEsp32Ip(): Promise<string> {
   try {
@@ -119,6 +131,13 @@ function parseRawSensorJson(rawText: string): SensorData {
  * Falls back to latest database reading or demo data if ESP32 is unreachable on cloud.
  */
 export async function fetchSensorData(): Promise<SensorData> {
+  // 1. Check in-memory live ingested sensor data first
+  if (latestLiveSensorData && esp32LastSeen && (Date.now() - esp32LastSeen.getTime() < 45000)) {
+    esp32Online = true;
+    return latestLiveSensorData;
+  }
+
+  // 2. Try polling local ESP32 IP
   const ip = await getEsp32Ip();
   const endpoints = ['/api/data', '/data'];
   let lastError: Error | null = null;
@@ -140,6 +159,7 @@ export async function fetchSensorData(): Promise<SensorData> {
 
         esp32Online = true;
         esp32LastSeen = new Date();
+        latestLiveSensorData = sensorData;
         return sensorData;
       }
     } catch (err) {
@@ -147,15 +167,14 @@ export async function fetchSensorData(): Promise<SensorData> {
     }
   }
 
-  esp32Online = false;
-
-  // On cloud / Render or when demo mode is enabled:
-  // Check if we have a recent reading in the database first
+  // 3. Check if we have a recent reading in the database
   try {
     const latest = await prisma.sensorReading.findFirst({
       orderBy: { timestamp: 'desc' },
     });
-    if (latest && (Date.now() - new Date(latest.timestamp).getTime()) < 300000) {
+    if (latest && (Date.now() - new Date(latest.timestamp).getTime()) < 60000) {
+      esp32Online = true;
+      esp32LastSeen = new Date(latest.timestamp);
       return {
         soil1: latest.soil1,
         soil2: latest.soil2,
@@ -173,6 +192,8 @@ export async function fetchSensorData(): Promise<SensorData> {
   } catch {
     // Ignore DB error
   }
+
+  esp32Online = false;
 
   // Fallback to demo sensor data
   return getDemoSensorData();
@@ -273,12 +294,17 @@ function checkTcpPort(host: string, port = 80, timeoutMs = 2000): Promise<boolea
 }
 
 /**
- * Check if ESP32 is reachable (HTTP endpoint or TCP port 80).
+ * Check if ESP32 is reachable (HTTP endpoint, recent ingestion, or TCP port 80).
  */
 export async function checkEsp32Health(): Promise<boolean> {
+  if (esp32LastSeen && (Date.now() - esp32LastSeen.getTime() < 45000)) {
+    esp32Online = true;
+    return true;
+  }
+
   const ip = await getEsp32Ip();
   try {
-    const isPortOpen = await checkTcpPort(ip, 80, 1500);
+    const isPortOpen = await checkTcpPort(ip, 80, 1000);
     if (isPortOpen) {
       esp32Online = true;
       esp32LastSeen = new Date();
@@ -293,8 +319,9 @@ export async function checkEsp32Health(): Promise<boolean> {
 }
 
 export function getEsp32Status() {
+  const isRecent = esp32LastSeen ? (Date.now() - esp32LastSeen.getTime() < 45000) : false;
   return {
-    online: esp32Online,
+    online: esp32Online || isRecent,
     ip: currentEsp32Ip,
     lastSeen: esp32LastSeen ? esp32LastSeen.toISOString() : null,
   };

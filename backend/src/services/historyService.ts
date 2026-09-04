@@ -93,10 +93,16 @@ export async function recordIngestedReading(data: {
   if (!esp32DeviceId) await loadDeviceId();
   const deviceId = esp32DeviceId || 'default-esp32';
 
-  const decision = evaluateIrrigation({
+  const fullData = {
     ...data,
     timestamp: new Date().toISOString(),
-  });
+    isDemo: false,
+  };
+
+  const { updateEsp32IngestedData } = await import('./esp32Service');
+  updateEsp32IngestedData(fullData);
+
+  const decision = evaluateIrrigation(fullData);
 
   const reading = await prisma.sensorReading.create({
     data: {
@@ -120,10 +126,7 @@ export async function recordIngestedReading(data: {
     }).catch(() => {});
   }
 
-  await analyzeAndAlert({
-    ...data,
-    timestamp: new Date().toISOString(),
-  });
+  await analyzeAndAlert(fullData);
 
   return reading;
 }

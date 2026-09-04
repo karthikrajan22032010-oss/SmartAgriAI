@@ -3,8 +3,11 @@ import { Leaf, Wifi } from 'lucide-react';
 import { LanguageSelector } from './LanguageSelector';
 import { useLanguage } from '../i18n';
 
+import { getEsp32LocalIp } from '../services/api';
+
 export function Header() {
   const { t } = useLanguage();
+  const esp32Ip = getEsp32LocalIp();
 
   return (
     <header className="header">
@@ -18,8 +21,8 @@ export function Header() {
       <div className="header-right">
         <LanguageSelector />
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          <Wifi size={14} />
-          <span>192.168.150.103</span>
+          <Wifi size={14} color="var(--accent-green)" />
+          <span>{esp32Ip}</span>
         </div>
       </div>
     </header>

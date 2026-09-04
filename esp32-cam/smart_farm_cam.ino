@@ -1,36 +1,36 @@
 // ============================================================
 // AI SMART FARMING ASSISTANT — ESP32-CAM (AI Thinker)
-// IP: 192.168.100.94
 //
 // FEATURES:
 //   - High-Speed MJPEG Live Stream (/stream)
 //   - High-Resolution Snapshot Capture (/capture)
 //   - Flashlight LED Control on GPIO 4 (/light/on, /light/off, /light/toggle)
 //   - Multi-client non-blocking HTTP server (esp_http_server)
+//   - Automatic DHCP Wi-Fi Connection
+//   - Optional Cloud Snapshot Sync to Render Website
 // ============================================================
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include "esp_camera.h"
 #include "esp_http_server.h"
 
 // ============================================================
-// WIFI CONFIGURATION
+// 1. WIFI CONFIGURATION
 // ============================================================
 const char* WIFI_SSID     = "YOUR_WIFI_SSID";       // <-- CHANGE TO YOUR WIFI SSID
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";   // <-- CHANGE TO YOUR WIFI PASSWORD
 
-// Static IP Configuration
-IPAddress STATIC_IP(192, 168, 100, 94);
-IPAddress GATEWAY(192, 168, 100, 1);
-IPAddress SUBNET(255, 255, 255, 0);
-IPAddress DNS1(8, 8, 8, 8);
+// CLOUD SERVER SNAPSHOT SYNC (Pushes live camera snapshots to your Render cloud website)
+const char* CLOUD_SNAPSHOT_URL = "https://smartagriai.onrender.com/api/camera/snapshot";
 
 // Flash LED pin on AI Thinker ESP32-CAM
 #define FLASH_LED_PIN 4
 
 // ============================================================
-// AI THINKER ESP32-CAM PIN MAP
+// 2. AI THINKER ESP32-CAM PIN MAP
 // ============================================================
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
@@ -54,7 +54,6 @@ static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" 
 static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
 static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
 
-httpd_handle_t stream_httpd = NULL;
 httpd_handle_t camera_httpd = NULL;
 bool lightState = false;
 
@@ -85,7 +84,7 @@ bool initCamera() {
   config.pixel_format = PIXFORMAT_JPEG;
 
   if (psramFound()) {
-    config.frame_size   = FRAMESIZE_VGA;   // 640x480
+    config.frame_size   = FRAMESIZE_VGA;   // 640x480 HD
     config.jpeg_quality = 10;              // High quality
     config.fb_count     = 2;
     config.grab_mode    = CAMERA_GRAB_LATEST;
@@ -103,75 +102,60 @@ bool initCamera() {
 
   sensor_t* s = esp_camera_sensor_get();
   if (s) {
-    s->set_brightness(s, 0);
-    s->set_contrast(s, 0);
-    s->set_saturation(s, 0);
+    s->set_brightness(s, 1);
+    s->set_contrast(s, 1);
+    s->set_saturation(s, 1);
     s->set_whitebal(s, 1);
     s->set_awb_gain(s, 1);
     s->set_wb_mode(s, 0);
-    s->set_exposure_ctrl(s, 1);
-    s->set_gain_ctrl(s, 1);
   }
 
-  Serial.println("✅ Camera initialized");
   return true;
 }
 
 // ============================================================
-// HTTP STREAM HANDLER (/stream)
+// MJPEG LIVE STREAM HANDLER (/stream)
 // ============================================================
 static esp_err_t stream_handler(httpd_req_t* req) {
   camera_fb_t* fb = NULL;
   esp_err_t res = ESP_OK;
-  size_t _jpg_buf_len = 0;
-  uint8_t* _jpg_buf = NULL;
-  char part_buf[64];
+  char part_buf[128];
 
-  res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
-  if (res != ESP_OK) return res;
-
+  httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  httpd_resp_set_hdr(req, "Pragma", "no-cache");
 
   while (true) {
     fb = esp_camera_fb_get();
     if (!fb) {
+      Serial.println("Camera capture failed for stream");
       res = ESP_FAIL;
-    } else {
-      _jpg_buf_len = fb->len;
-      _jpg_buf = fb->buf;
+      break;
     }
 
+    size_t hlen = snprintf(part_buf, sizeof(part_buf), _STREAM_PART, fb->len);
+    res = httpd_resp_send_chunk(req, part_buf, hlen);
+    if (res == ESP_OK) {
+      res = httpd_resp_send_chunk(req, (const char*)fb->buf, fb->len);
+    }
     if (res == ESP_OK) {
       res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
     }
-    if (res == ESP_OK) {
-      size_t hlen = snprintf(part_buf, 64, _STREAM_PART, _jpg_buf_len);
-      res = httpd_resp_send_chunk(req, part_buf, hlen);
-    }
-    if (res == ESP_OK) {
-      res = httpd_resp_send_chunk(req, (const char*)_jpg_buf, _jpg_buf_len);
-    }
 
-    if (fb) {
-      esp_camera_fb_return(fb);
-      fb = NULL;
-      _jpg_buf = NULL;
-    } else if (_jpg_buf) {
-      free(_jpg_buf);
-      _jpg_buf = NULL;
-    }
+    esp_camera_fb_return(fb);
+    fb = NULL;
 
     if (res != ESP_OK) {
       break;
     }
-    delay(10);
   }
 
   return res;
 }
 
 // ============================================================
-// HTTP CAPTURE HANDLER (/capture)
+// SNAPSHOT CAPTURE HANDLER (/capture)
 // ============================================================
 static esp_err_t capture_handler(httpd_req_t* req) {
   camera_fb_t* fb = esp_camera_fb_get();
@@ -183,7 +167,7 @@ static esp_err_t capture_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "image/jpeg");
   httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store, must-revalidate");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-cache, no-store");
 
   esp_err_t res = httpd_resp_send(req, (const char*)fb->buf, fb->len);
   esp_camera_fb_return(fb);
@@ -191,7 +175,7 @@ static esp_err_t capture_handler(httpd_req_t* req) {
 }
 
 // ============================================================
-// HTTP LIGHT CONTROL HANDLERS
+// LIGHT / FLASH CONTROL HANDLERS
 // ============================================================
 static esp_err_t light_on_handler(httpd_req_t* req) {
   lightState = true;
@@ -220,10 +204,26 @@ static esp_err_t light_toggle_handler(httpd_req_t* req) {
 }
 
 // ============================================================
-// HTTP STATUS & ROOT HANDLERS
+// RESOLUTION CONTROL HANDLERS
 // ============================================================
+static esp_err_t resolution_high_handler(httpd_req_t* req) {
+  sensor_t* s = esp_camera_sensor_get();
+  if (s) s->set_framesize(s, FRAMESIZE_VGA); // 640x480
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, "{\"success\":true,\"resolution\":\"640x480\"}", HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t resolution_low_handler(httpd_req_t* req) {
+  sensor_t* s = esp_camera_sensor_get();
+  if (s) s->set_framesize(s, FRAMESIZE_QVGA); // 320x240
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, "{\"success\":true,\"resolution\":\"320x240\"}", HTTPD_RESP_USE_STRLEN);
+}
+
 static esp_err_t status_handler(httpd_req_t* req) {
-  char json[128];
+  char json[160];
   snprintf(json, sizeof(json), "{\"online\":true,\"camera\":true,\"light\":%s,\"ip\":\"%s\"}",
     lightState ? "true" : "false", WiFi.localIP().toString().c_str());
   httpd_resp_set_type(req, "application/json");
@@ -257,6 +257,8 @@ void startCameraServer() {
   httpd_uri_t light_toggle_uri = { .uri = "/light/toggle", .method = HTTP_GET, .handler = light_toggle_handler, .user_ctx = NULL };
   httpd_uri_t light_alias_uri = { .uri = "/light", .method = HTTP_GET, .handler = light_toggle_handler, .user_ctx = NULL };
   httpd_uri_t flash_uri = { .uri = "/flash", .method = HTTP_GET, .handler = light_toggle_handler, .user_ctx = NULL };
+  httpd_uri_t res_high_uri = { .uri = "/resolution/high", .method = HTTP_GET, .handler = resolution_high_handler, .user_ctx = NULL };
+  httpd_uri_t res_low_uri = { .uri = "/resolution/low", .method = HTTP_GET, .handler = resolution_low_handler, .user_ctx = NULL };
 
   if (httpd_start(&camera_httpd, &config) == ESP_OK) {
     httpd_register_uri_handler(camera_httpd, &root_uri);
@@ -269,8 +271,36 @@ void startCameraServer() {
     httpd_register_uri_handler(camera_httpd, &light_toggle_uri);
     httpd_register_uri_handler(camera_httpd, &light_alias_uri);
     httpd_register_uri_handler(camera_httpd, &flash_uri);
-    Serial.println("✅ Web server started on port 80");
+    httpd_register_uri_handler(camera_httpd, &res_high_uri);
+    httpd_register_uri_handler(camera_httpd, &res_low_uri);
+    Serial.println("✅ ESP32-CAM HTTP Server active on port 80");
   }
+}
+
+// Push snapshot to Cloud website periodically
+void sendSnapshotToCloud() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  if (!CLOUD_SNAPSHOT_URL || strlen(CLOUD_SNAPSHOT_URL) == 0) return;
+
+  camera_fb_t* fb = esp_camera_fb_get();
+  if (!fb) return;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  if (http.begin(client, CLOUD_SNAPSHOT_URL)) {
+    http.addHeader("Content-Type", "image/jpeg");
+    http.setTimeout(4000);
+
+    int httpCode = http.POST(fb->buf, fb->len);
+    if (httpCode > 0) {
+      Serial.printf("📸 Cloud Snapshot Uploaded → HTTP %d\n", httpCode);
+    }
+    http.end();
+  }
+
+  esp_camera_fb_return(fb);
 }
 
 // ============================================================
@@ -286,12 +316,11 @@ void setup() {
   digitalWrite(FLASH_LED_PIN, LOW);
 
   if (!initCamera()) {
-    Serial.println("❌ Camera init failed");
+    Serial.println("❌ Camera sensor init failed!");
     return;
   }
 
-  // WiFi
-  WiFi.config(STATIC_IP, GATEWAY, SUBNET, DNS1);
+  // WiFi DHCP Connection
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   WiFi.setSleep(false);
 
@@ -305,18 +334,38 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("\n✅ WiFi Connected! IP: http://%s\n", WiFi.localIP().toString().c_str());
-    Serial.printf("Stream URL:  http://%s/stream\n", WiFi.localIP().toString().c_str());
-    Serial.printf("Capture URL: http://%s/capture\n", WiFi.localIP().toString().c_str());
-    Serial.printf("Light ON:    http://%s/light/on\n", WiFi.localIP().toString().c_str());
+    Serial.printf("Live MJPEG Stream: http://%s/stream\n", WiFi.localIP().toString().c_str());
+    Serial.printf("Snapshot Capture:  http://%s/capture\n", WiFi.localIP().toString().c_str());
+    Serial.printf("Light Control:     http://%s/light/toggle\n", WiFi.localIP().toString().c_str());
     startCameraServer();
   } else {
-    Serial.println("\n❌ WiFi connection failed");
+    Serial.println("\n❌ WiFi connection failed. Retrying in background...");
   }
 }
 
 // ============================================================
 // LOOP
 // ============================================================
+unsigned long lastCloudSnapshot = 0;
+
 void loop() {
-  delay(1000);
+  // WiFi reconnection check
+  if (WiFi.status() != WL_CONNECTED) {
+    static unsigned long lastReconnect = 0;
+    unsigned long now = millis();
+    if (now - lastReconnect > 20000) {
+      lastReconnect = now;
+      Serial.println("WiFi lost — reconnecting...");
+      WiFi.reconnect();
+    }
+  } else {
+    // Periodically upload snapshot to cloud (every 5 seconds)
+    unsigned long now = millis();
+    if (now - lastCloudSnapshot >= 5000) {
+      lastCloudSnapshot = now;
+      sendSnapshotToCloud();
+    }
+  }
+
+  delay(500);
 }

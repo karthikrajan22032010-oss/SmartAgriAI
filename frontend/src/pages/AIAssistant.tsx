@@ -71,7 +71,7 @@ export function AIAssistantPage() {
     setIsAsking(true);
 
     try {
-      const res = await api.askAIQuestion(text, sensors, language as Language);
+      const res = await api.askAIQuestion(text, sensors || undefined, language as Language);
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'ai',

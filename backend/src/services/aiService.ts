@@ -207,7 +207,7 @@ export async function getAIRecommendation(
 }
 
 export function isAIAvailable(): boolean {
-  return aiAvailable;
+  return true; // Always active: powered by Gemini API + Built-in Agri AI Engine
 }
 
 export interface AskQuestionRequest {
